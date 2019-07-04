@@ -15,6 +15,9 @@ copyright notices and license terms. -->
             <field name="name">purchase_line_tree</field>
         </record>
 
+        <record model="ir.action.report" id="purchase.report_purchase">
+            <field name="active" eval="False"/>
+        </record>
         <record model="ir.action.report" id="report_purchase">
             <field name="name">Purchase</field>
             <field name="model">purchase.purchase</field>
