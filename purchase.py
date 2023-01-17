@@ -59,7 +59,8 @@ class PurchaseLine(metaclass=PoolMeta):
             unit_price = round_price(unit_price)
 
             if self.discount != 1:
-                gross_unit_price_wo_round = unit_price / (1 - self.discount)
+                gross_unit_price_wo_round = (unit_price / (1 - self.discount)
+                    ).quantize(Decimal(1) / 10 ** DIGITS + DISCOUNT_DIGITS)
             gross_unit_price = round_price(gross_unit_price_wo_round)
 
         self.gross_unit_price = gross_unit_price
