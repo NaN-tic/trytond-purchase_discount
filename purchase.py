@@ -34,16 +34,6 @@ class PurchaseLine(metaclass=PoolMeta):
         super(PurchaseLine, cls).__setup__()
         cls.unit_price.states['readonly'] = True
         cls.unit_price.digits = (20, DIGITS + DISCOUNT_DIGITS)
-        if 'discount' not in cls.product.on_change:
-            cls.product.on_change.add('discount')
-        if 'discount' not in cls.unit.on_change:
-            cls.unit.on_change.add('discount')
-        if 'discount' not in cls.amount.on_change_with:
-            cls.amount.on_change_with.add('discount')
-        if 'gross_unit_price' not in cls.amount.on_change_with:
-            cls.amount.on_change_with.add('gross_unit_price')
-        if 'discount' not in cls.quantity.on_change:
-            cls.quantity.on_change.add('discount')
 
     @staticmethod
     def default_discount():
@@ -66,6 +56,14 @@ class PurchaseLine(metaclass=PoolMeta):
         self.gross_unit_price_wo_round = gross_unit_price_wo_round
         self.unit_price = unit_price
         self.amount = self.on_change_with_amount()
+
+    @fields.depends('discount')
+    def on_change_unit(self):
+        super().on_change_unit()
+
+    @fields.depends('gross_unit_price', 'discount')
+    def on_change_with_amount(self):
+        return super().on_change_with_amount()
 
     @fields.depends(methods=['update_prices'])
     def on_change_gross_unit_price(self):
