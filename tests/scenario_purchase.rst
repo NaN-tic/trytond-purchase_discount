@@ -171,7 +171,7 @@ Purchase 5 products testing several on_change calls and avoiding division by zer
     True
     >>> line1.discount == Decimal('0.12')
     True
-    >>> line2.amount == Decimal('0.00')
+    >>> line2.amount == None
     True
     >>> line3.amount == Decimal('15.00')
     True
@@ -193,20 +193,16 @@ Process purchase::
 
 Check invoice discounts::
 
-    >>> line1, line2, line3 = invoice.lines
+    >>> line1, line2 = invoice.lines
     >>> line1.gross_unit_price == Decimal('5.0000')
     True
     >>> line1.discount == Decimal('0.12')
     True
     >>> line1.amount == Decimal('8.80')
     True
-    >>> line2.gross_unit_price == None
+    >>> line2.gross_unit_price == Decimal('5.0000')
     True
     >>> line2.discount == Decimal('0.00')
     True
-    >>> line3.gross_unit_price == Decimal('5.0000')
-    True
-    >>> line3.discount == Decimal('0.00')
-    True
-    >>> line3.amount == Decimal('15.00')
+    >>> line2.amount == Decimal('15.00')
     True
