@@ -8,8 +8,6 @@ from trytond.pyson import Eval
 from trytond.config import config as config_
 from trytond.modules.product import round_price
 
-__all__ = ['PurchaseLine']
-
 STATES = {
     'invisible': Eval('type') != 'line',
     'required': Eval('type') == 'line',
@@ -61,10 +59,6 @@ class PurchaseLine(metaclass=PoolMeta):
     def on_change_unit(self):
         super().on_change_unit()
 
-    @fields.depends('gross_unit_price', 'discount')
-    def on_change_with_amount(self):
-        return super().on_change_with_amount()
-
     @fields.depends(methods=['update_prices'])
     def on_change_gross_unit_price(self):
         return self.update_prices()
@@ -80,7 +74,7 @@ class PurchaseLine(metaclass=PoolMeta):
         if not self.discount:
             self.discount = Decimal(0)
 
-        if self.unit_price:
+        if self.unit_price is not None:
             self.update_prices()
 
     @fields.depends('unit_price', 'discount', methods=['update_prices'])
@@ -90,7 +84,7 @@ class PurchaseLine(metaclass=PoolMeta):
         if not self.discount:
             self.discount = Decimal(0)
 
-        if self.unit_price:
+        if self.unit_price is not None:
             self.update_prices()
 
     def get_invoice_line(self):
