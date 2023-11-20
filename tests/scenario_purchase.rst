@@ -157,14 +157,16 @@ Purchase 5 products testing several on_change calls and avoiding division by zer
     True
     >>> purchase_line.unit = product.purchase_uom
     >>> purchase_line.quantity = 2.0
-    >>> purchase_line.unit_price = Decimal('4.40')
+    >>> purchase_line.gross_unit_price = product.cost_price
+    >>> purchase_line.unit_price == Decimal('4.40')
+    True
     >>> purchase_line = purchase.lines.new()
     >>> purchase_line.type = 'comment'
     >>> purchase_line.description = 'Comment'
     >>> purchase_line = purchase.lines.new()
     >>> purchase_line.product = product
     >>> purchase_line.quantity = 3.0
-    >>> purchase_line.unit_price = Decimal('5')
+    >>> purchase_line.gross_unit_price = Decimal('5')
     >>> purchase.save()
     >>> line1, line2, line3 = purchase.lines
     >>> line1.amount == Decimal('8.80')
