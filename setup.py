@@ -12,7 +12,7 @@ from configparser import ConfigParser
 MODULE = 'purchase_discount'
 PREFIX = 'nan-tic'
 MODULE2PREFIX = {
-    'account_invoice_discount': 'nan-tic',
+    'account_invoice_discount': 'trytonspain',
     }
 
 
