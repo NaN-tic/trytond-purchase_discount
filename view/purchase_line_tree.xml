@@ -3,8 +3,8 @@
 copyright notices and license terms. -->
 <data>
     <xpath expr="/tree/field[@name='unit_price']" position="before">
-        <field name="gross_unit_price"/>
-        <field name="discount" factor="100">
+        <field name="gross_unit_price" optional="0"/>
+        <field name="discount" factor="100" optional="0">
             <suffix name="discount" string="%"/>
         </field>
     </xpath>
