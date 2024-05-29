@@ -105,8 +105,8 @@ class PurchaseLine(metaclass=PoolMeta):
         for vals in vlist:
             if vals.get('type', 'line') != 'line':
                 continue
-            gross_unit_price = (vals.get('unit_price', Decimal('0.0'))
-                or Decimal('0.0'))
+            gross_unit_price = (vals.get('unit_price', Decimal(0))
+                or Decimal(0))
             if 'discount' in vals and vals['discount'] != 1:
                 gross_unit_price = gross_unit_price / (1 - vals['discount'])
             vals['gross_unit_price'] = round_price(gross_unit_price)
