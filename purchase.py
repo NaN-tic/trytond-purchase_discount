@@ -46,7 +46,7 @@ class Line(metaclass=PoolMeta):
     def __register__(cls, module_name):
         # Rename gross_unit_price to base_price
         table = cls.__table_handler__(module_name)
-        if table.column_exist('gross_unit_price') and not table.column_exist('base_price'):  
+        if table.column_exist('gross_unit_price') and not table.column_exist('base_price'):
             table.column_rename('gross_unit_price', 'base_price')
         super().__register__(module_name)
 
