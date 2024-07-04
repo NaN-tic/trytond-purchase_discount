@@ -1,115 +1,160 @@
-# This file is part of purchase_discount module for Tryton.
-# The COPYRIGHT file at the top level of this repository contains
-# the full copyright notices and license terms.
+# This file is part of Tryton.  The COPYRIGHT file at the top level of
+# this repository contains the full copyright notices and license terms.
 from decimal import Decimal
+
 from trytond.model import fields
-from trytond.pool import PoolMeta
-from trytond.pyson import Eval
 from trytond.modules.currency.fields import Monetary
-from trytond.modules.account_invoice_discount.invoice import (gross_unit_price_digits,
-    discount_digits)
-from trytond.modules.product import round_price
-
-STATES = {
-    'invisible': Eval('type') != 'line',
-    'required': Eval('type') == 'line',
-    'readonly': Eval('purchase_state') != 'draft',
-    }
+from trytond.modules.product import price_digits, round_price
+from trytond.pool import Pool, PoolMeta
+from trytond.pyson import Eval
+from trytond.transaction import Transaction
 
 
-class PurchaseLine(metaclass=PoolMeta):
+class Line(metaclass=PoolMeta):
     __name__ = 'purchase.line'
 
-    gross_unit_price = Monetary('Gross Price', digits=gross_unit_price_digits,
-        currency='currency', states=STATES)
-    discount = fields.Numeric('Discount', digits=discount_digits,
-        states=STATES)
+    base_price = Monetary(
+        "Base Price", currency='currency', digits=price_digits,
+        states={
+            'invisible': Eval('type') != 'line',
+            'readonly': Eval('purchase_state') != 'draft',
+            })
+
+    discount_rate = fields.Function(fields.Numeric(
+            "Discount Rate", digits=(16, 4),
+            states={
+                'invisible': Eval('type') != 'line',
+                'readonly': Eval('purchase_state') != 'draft',
+                }),
+        'on_change_with_discount_rate', setter='set_discount_rate')
+    discount_amount = fields.Function(Monetary(
+            "Discount Amount", currency='currency', digits=price_digits,
+            states={
+                'invisible': Eval('type') != 'line',
+                'readonly': Eval('purchase_state') != 'draft',
+                }),
+        'on_change_with_discount_amount', setter='set_discount_amount')
+
+    discount = fields.Function(fields.Char(
+            "Discount",
+            states={
+                'invisible': ~Eval('discount'),
+                }),
+        'on_change_with_discount')
 
     @classmethod
-    def __setup__(cls):
-        super().__setup__()
-        cls.unit_price.states['readonly'] = True
+    def __register__(cls, module_name):
+        # Rename gross_unit_price to base_price
+        table = cls.__table_handler__(module_name)
+        if table.column_exist('gross_unit_price') and not table.column_exist('base_price'):  
+            table.column_rename('gross_unit_price', 'base_price')
+        super().__register__(module_name)
 
-    @staticmethod
-    def default_discount():
-        return Decimal(0)
-
-    @fields.depends('gross_unit_price', 'unit_price', 'discount',
-        methods=['on_change_with_amount'])
-    def update_prices(self):
-        unit_price = None
-        gross_unit_price = self.gross_unit_price
-        if self.gross_unit_price is not None and self.discount is not None:
-            unit_price = self.gross_unit_price * (1 - self.discount)
-            unit_price = round_price(unit_price)
-
-            if self.discount != 1:
-                gross_unit_price = unit_price / (1 - self.discount)
-
-            gup_digits = self.__class__.gross_unit_price.digits[1]
-            gross_unit_price = gross_unit_price.quantize(
-                Decimal(str(10.0 ** -gup_digits)))
-
-        self.gross_unit_price = gross_unit_price
-        self.unit_price = unit_price
-        self.amount = self.on_change_with_amount()
-
-    @fields.depends('discount')
-    def on_change_unit(self):
-        super().on_change_unit()
-
-    @fields.depends(methods=['update_prices'])
-    def on_change_gross_unit_price(self):
-        return self.update_prices()
-
-    @fields.depends('unit_price', methods=['update_prices'])
-    def on_change_unit_price(self):
-        # unit_price has readonly state but could set unit_price from source code
-        if self.unit_price is not None:
-            self.update_prices()
-
-    @fields.depends(methods=['update_prices'])
-    def on_change_discount(self):
-        return self.update_prices()
-
-    @fields.depends('unit_price', 'discount', methods=['update_prices'])
+    @fields.depends(
+        methods=[
+            'compute_base_price', 'on_change_with_discount_rate',
+            'on_change_with_discount_amount', 'on_change_with_discount'])
     def on_change_product(self):
         super().on_change_product()
-        self.gross_unit_price = self.unit_price
-        if not self.discount:
-            self.discount = Decimal(0)
+        if self.product:
+            self.base_price = self.compute_base_price()
+            self.discount_rate = self.on_change_with_discount_rate()
+            self.discount_amount = self.on_change_with_discount_amount()
+            self.discount = self.on_change_with_discount()
 
-        if self.unit_price is not None:
-            self.update_prices()
+    @fields.depends('product', 'quantity', 'base_price',
+        methods=['_get_context_purchase_price'])
+    def compute_base_price(self):
+        pool = Pool()
+        Product = pool.get('product.product')
 
-    @fields.depends('unit_price', 'discount', methods=['update_prices'])
+        base_price = None
+        if self.product:
+            with Transaction().set_context(self._get_context_purchase_price()):
+                base_price = Product.get_purchase_price(
+                    [self.product], abs(self.quantity or 0))[self.product.id]
+        if base_price is None:
+            base_price = self.base_price
+        return base_price
+
+    @fields.depends(
+        methods=[
+            'compute_base_price', 'on_change_with_discount_rate',
+            'on_change_with_discount_amount', 'on_change_with_discount'])
     def on_change_quantity(self):
         super().on_change_quantity()
-        self.gross_unit_price = self.unit_price
-        if not self.discount:
-            self.discount = Decimal(0)
+        self.base_price = self.compute_base_price()
+        self.discount_rate = self.on_change_with_discount_rate()
+        self.discount_amount = self.on_change_with_discount_amount()
+        self.discount = self.on_change_with_discount()
 
-        if self.unit_price is not None:
-            self.update_prices()
+    @fields.depends('unit_price', 'base_price')
+    def on_change_with_discount_rate(self, name=None):
+        if self.unit_price is None or not self.base_price:
+            return
+        rate = 1 - self.unit_price / self.base_price
+        return rate.quantize(
+            Decimal(1) / 10 ** self.__class__.discount_rate.digits[1])
 
-    def get_invoice_line(self):
-        lines = super().get_invoice_line()
-        for line in lines:
-            line.gross_unit_price = self.gross_unit_price
-            line.discount = self.discount
-        return lines
+    @fields.depends(
+        'base_price', 'discount_rate',
+        methods=['on_change_with_discount_amount', 'on_change_with_discount',
+            'on_change_with_amount'])
+    def on_change_discount_rate(self):
+        if self.base_price is not None and self.discount_rate is not None:
+            self.unit_price = round_price(
+                self.base_price * (1 - self.discount_rate))
+            self.discount_amount = self.on_change_with_discount_amount()
+            self.discount = self.on_change_with_discount()
+            self.amount = self.on_change_with_amount()
 
     @classmethod
-    def create(cls, vlist):
-        vlist = [x.copy() for x in vlist]
-        for vals in vlist:
-            if vals.get('type', 'line') != 'line':
-                continue
-            gross_unit_price = (vals.get('unit_price', Decimal(0))
-                or Decimal(0))
-            if 'discount' in vals and vals['discount'] != 1:
-                gross_unit_price = gross_unit_price / (1 - vals['discount'])
-            vals['gross_unit_price'] = round_price(gross_unit_price)
-            if not vals.get('discount'):
-                vals['discount'] = Decimal(0)
-        return super().create(vlist)
+    def set_discount_rate(cls, lines, name, value):
+        pass
+
+    @fields.depends('unit_price', 'base_price')
+    def on_change_with_discount_amount(self, name=None):
+        if self.unit_price is None or self.base_price is None:
+            return
+        return round_price(self.base_price - self.unit_price)
+
+    @fields.depends(
+        'base_price', 'discount_amount',
+        methods=['on_change_with_discount_rate', 'on_change_with_discount',
+            'on_change_with_amount'])
+    def on_change_discount_amount(self):
+        if self.base_price is not None and self.discount_amount is not None:
+            self.unit_price = round_price(
+                self.base_price - self.discount_amount)
+            self.discount_rate = self.on_change_with_discount_rate()
+            self.discount = self.on_change_with_discount()
+            self.amount = self.on_change_with_amount()
+
+    @classmethod
+    def set_discount_amount(cls, lines, name, value):
+        pass
+
+    @fields.depends(
+        'purchase', '_parent_purchase.currency',
+        methods=[
+            'on_change_with_discount_rate', 'on_change_with_discount_amount'])
+    def on_change_with_discount(self, name=None):
+        pool = Pool()
+        Lang = pool.get('ir.lang')
+        lang = Lang.get()
+        rate = self.on_change_with_discount_rate()
+        if not rate or rate % Decimal('0.01'):
+            amount = self.on_change_with_discount_amount()
+            if amount:
+                return lang.currency(
+                    amount, self.purchase.currency, digits=price_digits[1])
+        else:
+            return lang.format('%i', rate * 100) + '%'
+
+    @classmethod
+    def view_attributes(cls):
+        return super().view_attributes() + [
+            ('/form//label[@id="discount"]', 'states', {
+                'invisible': Eval('type') != 'line',
+                }, ['type']),
+            ]
