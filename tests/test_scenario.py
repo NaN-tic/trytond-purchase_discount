@@ -10,26 +10,26 @@ class Test(unittest.TestCase):
     def setUp(self):
         drop_db()
         super().setUp()
-        
+
     def tearDown(self):
         drop_db()
         super().tearDown()
 
     def test_purchase_discount(self):
         activate_modules('purchase_discount')
-        
+
         create_company()
-        
+
         # Create parties
         Party = Model.get('party.party')
         supplier = Party(name="Supplier")
         supplier.save()
-        
+
         # Create product
         ProductUom = Model.get('product.uom')
         unit, = ProductUom.find([('name', '=', 'Unit')])
         ProductTemplate = Model.get('product.template')
-        
+
         template = ProductTemplate()
         template.name = 'product'
         template.default_uom = unit
@@ -39,7 +39,7 @@ class Test(unittest.TestCase):
         product_supplier.prices.new(quantity=1, unit_price=Decimal('10'))
         template.save()
         product, = template.products
-        
+
         # Create a purchase
         Purchase = Model.get('purchase.purchase')
         purchase = Purchase()
@@ -49,19 +49,19 @@ class Test(unittest.TestCase):
         line.quantity = 1
         self.assertEqual(line.base_price, Decimal('10.0000'))
         self.assertEqual(line.unit_price, Decimal('10.0000'))
-        
+
         # Set a discount of 10%
         line.discount_rate = Decimal('0.1')
         self.assertEqual(line.unit_price, Decimal('9.0000'))
         self.assertEqual(line.discount_amount, Decimal('1.0000'))
         self.assertEqual(line.discount, '10%')
-    
+
         purchase.save()
         line, = purchase.lines
         self.assertEqual(line.unit_price, Decimal('9.0000'))
         self.assertEqual(line.discount_amount, Decimal('1.0000'))
         self.assertEqual(line.discount, '10%')
-        
+
         # Set a discount amount
         line.discount_amount = Decimal('3.3333')
         self.assertEqual(line.unit_price, Decimal('6.6667'))
