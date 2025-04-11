@@ -62,20 +62,17 @@ class Line(metaclass=PoolMeta):
             self.discount_amount = self.on_change_with_discount_amount()
             self.discount = self.on_change_with_discount()
 
-    @fields.depends('product', 'quantity', 'base_price',
-        methods=['_get_context_purchase_price'])
+    @fields.depends('unit_price')
     def compute_base_price(self):
-        pool = Pool()
-        Product = pool.get('product.product')
+        return self.unit_price
 
-        base_price = None
-        if self.product:
-            with Transaction().set_context(self._get_context_purchase_price()):
-                base_price = Product.get_purchase_price(
-                    [self.product], abs(self.quantity or 0))[self.product.id]
-        if base_price is None:
-            base_price = self.base_price
-        return base_price
+    @fields.depends('base_price', methods=['on_change_discount_rate'])
+    def on_change_base_price(self):
+        if self.base_price is not None:
+            if self.discount_rate is not None:
+                self.on_change_discount_rate()
+            else:
+                self.unit_price = self.base_price
 
     @fields.depends(
         methods=[
