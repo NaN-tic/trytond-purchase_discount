@@ -63,8 +63,11 @@ class Test(unittest.TestCase):
         line = purchase.lines.new()
         line.product = product
         line.quantity = 1
-
         line.base_price = Decimal('10.0000')
+        self.assertEqual(line.unit_price, Decimal('10.0000'))
+        line.unit_price = Decimal('8.0000')
+        self.assertEqual(line.base_price, Decimal('10.0000'))
+        self.assertEqual(line.discount, '20%')
         line.discount_rate = Decimal('0.1')
         self.assertEqual(line.unit_price, Decimal('9.0000'))
 
