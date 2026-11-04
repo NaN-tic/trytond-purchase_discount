@@ -1,0 +1,32 @@
+#
+msgid ""
+msgstr ""
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgctxt "field:purchase.line,base_price:"
+msgid "Base Price"
+msgstr "基准价格"
+
+msgctxt "field:purchase.line,discount:"
+msgid "Discount"
+msgstr "折扣"
+
+msgctxt "field:purchase.line,discount_amount:"
+msgid "Discount Amount"
+msgstr "折扣金额"
+
+msgctxt "field:purchase.line,discount_rate:"
+msgid "Discount Rate"
+msgstr "折扣率"
+
+msgctxt "view:purchase.line:"
+msgid "%"
+msgstr "%"
+
+msgctxt "view:purchase.line:"
+msgid "Discount"
+msgstr "折扣"
